@@ -14,10 +14,9 @@
             </ui:TitleBar.Icon>
         </ui:TitleBar>
         <StackPanel Margin="28,8,28,28">
-            <TextBlock Text="Time's up" FontSize="36" FontWeight="SemiBold" HorizontalAlignment="Center"
-                       Margin="0,0,0,20" Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+            <TextBlock Style="{StaticResource PageTitle}" Text="Time's up" HorizontalAlignment="Center" Margin="0,0,0,20" />
             <StackPanel x:Name="RingingList" />
-            <ui:TextBlock Text="New Timer" FontTypography="BodyStrong" Margin="0,16,0,10" />
+            <TextBlock Style="{StaticResource StrongText}" Text="New Timer" Margin="0,16,0,10" />
             <local:TimerStarter x:Name="Starter" />
         </StackPanel>
     </StackPanel>

@@ -53,7 +53,7 @@
         </Grid.RowDefinitions>
 
         <DockPanel Grid.Row="0" Margin="0,0,0,20" LastChildFill="False">
-            <ui:TextBlock DockPanel.Dock="Left" Text="Overview" FontTypography="TitleLarge" VerticalAlignment="Center" />
+            <TextBlock Style="{StaticResource PageTitle}" DockPanel.Dock="Left" Text="Overview" VerticalAlignment="Center" />
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                 <RadioButton x:Name="TodayOption" Content="Today" IsChecked="True" Style="{StaticResource PeriodOption}"
                              Margin="0,0,6,0" Checked="Period_Checked" />
@@ -90,12 +90,12 @@
                         <ColumnDefinition Width="120" />
                         <ColumnDefinition Width="200" />
                     </Grid.ColumnDefinitions>
-                    <ui:TextBlock Grid.Column="0" Text="App or Website" FontTypography="BodyStrong" />
-                    <ui:TextBlock Grid.Column="1" Text="Time" FontTypography="BodyStrong" HorizontalAlignment="Right" Margin="0,0,24,0" />
-                    <ui:TextBlock Grid.Column="2" Text="Category" FontTypography="BodyStrong" />
+                    <TextBlock Style="{StaticResource StrongText}" Grid.Column="0" Text="App or Website" />
+                    <TextBlock Style="{StaticResource StrongText}" Grid.Column="1" Text="Time" HorizontalAlignment="Right" Margin="0,0,24,0" />
+                    <TextBlock Style="{StaticResource StrongText}" Grid.Column="2" Text="Category" />
                 </Grid>
-                <ui:TextBlock x:Name="NoSourcesText" DockPanel.Dock="Top" Margin="24,8,24,16"
-                              Text="No Screen Time yet." Appearance="Secondary" Visibility="Collapsed" />
+                <TextBlock Style="{StaticResource SecondaryText}" x:Name="NoSourcesText" DockPanel.Dock="Top" Margin="24,8,24,16"
+                              Text="No Screen Time yet." Visibility="Collapsed" />
                 <ItemsControl x:Name="SourceList" VirtualizingPanel.IsVirtualizing="True"
                               VirtualizingPanel.ScrollUnit="Pixel" ScrollViewer.CanContentScroll="True">
                     <ItemsControl.Template>

@@ -12,6 +12,24 @@
             </ResourceDictionary.MergedDictionaries>
             <!-- The Category brushes (ProductiveBrush and the rest) are set in code by CategoryColors. -->
 
+            <!-- Text, coloured from the theme so it follows light and dark. -->
+            <Style x:Key="BodyText" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="Foreground" Value="{DynamicResource TextFillColorPrimaryBrush}" />
+            </Style>
+            <Style x:Key="SecondaryText" TargetType="TextBlock" BasedOn="{StaticResource BodyText}">
+                <Setter Property="Foreground" Value="{DynamicResource TextFillColorSecondaryBrush}" />
+            </Style>
+            <Style x:Key="StrongText" TargetType="TextBlock" BasedOn="{StaticResource BodyText}">
+                <Setter Property="FontWeight" Value="SemiBold" />
+            </Style>
+            <Style x:Key="SectionTitle" TargetType="TextBlock" BasedOn="{StaticResource StrongText}">
+                <Setter Property="FontSize" Value="20" />
+            </Style>
+            <Style x:Key="PageTitle" TargetType="TextBlock" BasedOn="{StaticResource StrongText}">
+                <Setter Property="FontSize" Value="36" />
+            </Style>
+
             <!-- A panel on a page. -->
             <Style x:Key="Card" TargetType="Border">
                 <Setter Property="Background" Value="{DynamicResource CardBackgroundFillColorDefaultBrush}" />

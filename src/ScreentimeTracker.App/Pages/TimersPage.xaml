@@ -6,22 +6,21 @@
       Title="Timers"
       ScrollViewer.CanContentScroll="False"><!-- Fill the window; only the Timer list scrolls. -->
     <DockPanel Margin="36,20,36,28">
-        <ui:TextBlock DockPanel.Dock="Top" Text="Timers" FontTypography="TitleLarge" Margin="0,0,0,20" />
+        <TextBlock Style="{StaticResource PageTitle}" DockPanel.Dock="Top" Text="Timers" Margin="0,0,0,20" />
 
         <Border DockPanel.Dock="Top" Style="{StaticResource Card}" Margin="0,0,0,24">
             <StackPanel>
-                <ui:TextBlock Text="Start a Timer" FontTypography="Subtitle" Margin="0,0,0,12" />
+                <TextBlock Style="{StaticResource SectionTitle}" Text="Start a Timer" Margin="0,0,0,12" />
                 <app:TimerStarter x:Name="Starter" />
             </StackPanel>
         </Border>
 
         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,12" LastChildFill="False">
-            <ui:TextBlock DockPanel.Dock="Left" Text="Running" FontTypography="Subtitle" VerticalAlignment="Center" />
+            <TextBlock Style="{StaticResource SectionTitle}" DockPanel.Dock="Left" Text="Running" VerticalAlignment="Center" />
             <ui:Button x:Name="CancelAllButton" DockPanel.Dock="Right" Content="Cancel all Timers"
                        Icon="{ui:SymbolIcon Dismiss24}" Click="CancelAll_Click" />
         </DockPanel>
-        <TextBlock x:Name="NoTimersText" DockPanel.Dock="Top" FontSize="14"
-                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
+        <TextBlock x:Name="NoTimersText" DockPanel.Dock="Top" Style="{StaticResource BodyText}" />
 
         <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel x:Name="TimerList" />
