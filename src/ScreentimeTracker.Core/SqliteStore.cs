@@ -37,7 +37,31 @@ internal sealed class SqliteStore : IDisposable
                 end_time   INTEGER NOT NULL
             );
             CREATE INDEX IF NOT EXISTS time_records_by_end ON time_records (end_time);
+            CREATE TABLE IF NOT EXISTS settings (
+                name  TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            );
             """);
+    }
+
+    public string? ReadSetting(string name)
+    {
+        using var command = _connection.CreateCommand();
+        command.CommandText = "SELECT value FROM settings WHERE name = $name;";
+        command.Parameters.AddWithValue("$name", name);
+        return command.ExecuteScalar() as string;
+    }
+
+    public void WriteSetting(string name, string value)
+    {
+        using var command = _connection.CreateCommand();
+        command.CommandText = """
+            INSERT INTO settings (name, value) VALUES ($name, $value)
+            ON CONFLICT (name) DO UPDATE SET value = excluded.value;
+            """;
+        command.Parameters.AddWithValue("$name", name);
+        command.Parameters.AddWithValue("$value", value);
+        command.ExecuteNonQuery();
     }
 
     /// <summary>Records the App as a Source, refreshing its display name, and returns its id.</summary>

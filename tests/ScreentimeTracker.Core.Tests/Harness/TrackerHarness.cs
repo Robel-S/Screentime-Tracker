@@ -18,13 +18,14 @@ public sealed class TrackerHarness : IDisposable
         _directory = Path.Combine(Path.GetTempPath(), "screentime-tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(_directory);
         _databasePath = Path.Combine(_directory, "screentime.db");
+        Signals = new FakeSystemSignals(Clock);
         Tracker = ScreenTimeTracker.Open(_databasePath, Signals, Clock);
     }
 
     private readonly string _databasePath;
     private FakeClock Clock { get; } = new(Morning);
 
-    public FakeSystemSignals Signals { get; } = new();
+    public FakeSystemSignals Signals { get; }
     public ScreenTimeTracker Tracker { get; private set; }
 
     public DateOnly Today => DateOnly.FromDateTime(Clock.Now);
@@ -39,6 +40,12 @@ public sealed class TrackerHarness : IDisposable
             Tracker.Tick();
         }
     }
+
+    /// <summary>
+    /// The machine sleeps and wakes. No ticks run while it sleeps, and by the first tick after waking
+    /// the session is active again.
+    /// </summary>
+    public void SleepFor(TimeSpan duration) => Clock.Advance(duration);
 
     public void Use(AppIdentity app, TimeSpan duration)
     {

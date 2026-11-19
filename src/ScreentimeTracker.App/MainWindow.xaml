@@ -4,6 +4,14 @@
         Title="Screentime Tracker" Height="480" Width="420"
         WindowStartupLocation="CenterScreen">
     <DockPanel Margin="12">
+        <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,8,0,0">
+            <TextBlock Text="Idle after" VerticalAlignment="Center" />
+            <TextBox x:Name="IdleThresholdBox" Width="48" Margin="6,0" VerticalContentAlignment="Center"
+                     KeyDown="IdleThresholdBox_KeyDown" />
+            <TextBlock Text="minutes without input" VerticalAlignment="Center" />
+            <Button Content="Apply" Margin="8,0,0,0" Padding="10,2" Click="ApplyIdleThreshold_Click" />
+            <TextBlock x:Name="IdleThresholdStatus" Margin="8,0,0,0" VerticalAlignment="Center" Foreground="Gray" />
+        </StackPanel>
         <TextBlock DockPanel.Dock="Top" Text="Today" FontSize="20" FontWeight="SemiBold" Margin="0,0,0,8" />
         <ListView x:Name="SourceList">
             <ListView.View>

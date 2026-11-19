@@ -1,5 +1,7 @@
 using System.ComponentModel;
+using System.Globalization;
 using System.Windows;
+using System.Windows.Input;
 using System.Windows.Threading;
 using ScreentimeTracker.Core;
 
@@ -20,9 +22,38 @@ public partial class MainWindow : Window
         _refresher.Tick += (_, _) => Refresh();
         IsVisibleChanged += (_, _) =>
         {
-            if (IsVisible) { Refresh(); _refresher.Start(); }
+            if (IsVisible) { Refresh(); ShowIdleThreshold(); _refresher.Start(); }
             else _refresher.Stop();
         };
+    }
+
+    private void ShowIdleThreshold()
+    {
+        IdleThresholdBox.Text = _tracker.IdleThreshold.TotalMinutes.ToString("0.##", CultureInfo.CurrentCulture);
+        IdleThresholdStatus.Text = "";
+    }
+
+    private void ApplyIdleThreshold_Click(object sender, RoutedEventArgs e) => ApplyIdleThreshold();
+
+    private void IdleThresholdBox_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter) ApplyIdleThreshold();
+    }
+
+    private void ApplyIdleThreshold()
+    {
+        var min = ScreenTimeTracker.MinIdleThreshold.TotalMinutes;
+        var max = ScreenTimeTracker.MaxIdleThreshold.TotalMinutes;
+        if (!double.TryParse(IdleThresholdBox.Text, NumberStyles.Float, CultureInfo.CurrentCulture, out var minutes)
+            || minutes < min || minutes > max)
+        {
+            IdleThresholdStatus.Text = $"Enter minutes from {min:0.##} to {max:0.##}";
+            return;
+        }
+
+        _tracker.SetIdleThreshold(TimeSpan.FromMinutes(minutes));
+        ShowIdleThreshold();
+        IdleThresholdStatus.Text = "Saved";
     }
 
     public void CloseForQuit()

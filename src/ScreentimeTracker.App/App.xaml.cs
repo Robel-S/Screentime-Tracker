@@ -12,6 +12,7 @@ namespace ScreentimeTracker.App;
 /// </summary>
 public partial class App : Application
 {
+    private Win32SystemSignals? _signals;
     private ScreenTimeTracker? _tracker;
     private DispatcherTimer? _ticker;
     private Forms.NotifyIcon? _trayIcon;
@@ -25,8 +26,9 @@ public partial class App : Application
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ScreentimeTracker");
         Directory.CreateDirectory(dataDirectory);
 
+        _signals = new Win32SystemSignals();
         var tracker = ScreenTimeTracker.Open(
-            Path.Combine(dataDirectory, "screentime.db"), new Win32SystemSignals(), new SystemClock());
+            Path.Combine(dataDirectory, "screentime.db"), _signals, new SystemClock());
         _tracker = tracker;
 
         _ticker = new DispatcherTimer(TimeSpan.FromSeconds(1), DispatcherPriority.Background,
@@ -76,6 +78,7 @@ public partial class App : Application
             _trayIcon.Dispose();
         }
         _tracker?.Dispose();
+        _signals?.Dispose();
         base.OnExit(e);
     }
 }
