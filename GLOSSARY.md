@@ -41,13 +41,13 @@ _Avoid_: Unknown, other, unsorted
 ## Timer
 
 **Timer**:
-A countdown the user starts by hand. It runs independently of what they are doing.
+A countdown the user starts by hand, with an optional label; without one it goes by its duration, such as "25-minute Timer". It runs independently of what they are doing. Any number can run at once, and each rings, Snoozes and is Dismissed on its own.
 _Avoid_: Limit, alarm, pomodoro
 
 **Interruption**:
-The always-on-top alert shown when a Timer runs out, which stays until the user dismisses or snoozes it.
+The one always-on-top alert listing every Timer that has run out and is ringing. It stays until no Timer is ringing, as each is Dismissed or Snoozed.
 _Avoid_: Notification, popup, toast, alert
 
 **Snooze**:
-Dismissing an Interruption for five minutes, after which it reappears.
+Taking one ringing Timer off the Interruption for five minutes, after which it rings again.
 _Avoid_: Delay, postpone, extend

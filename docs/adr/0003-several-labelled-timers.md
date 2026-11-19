@@ -1,0 +1,5 @@
+# Several labelled Timers can run at once
+
+Any number of Timers can run at once, each with an optional label, and each rings, Snoozes and is Dismissed on its own. This reverses the original spec's "only one Timer at a time" rule and its "Named Timers" non-goal. One Timer was meant to keep it always clear which one was counting, but in use the user wants to time overlapping things, such as a focus block and the tea brewing during it, and starting the second silently replaced the first. Labels are what keep several Timers clear: without one, a Timer goes by its duration ("25-minute Timer").
+
+There is still a single Interruption, not one window per Timer. It lists every ringing Timer, each with Snooze, Dismiss and Start another, and hides once none is ringing, so several Timers running out together never stack windows on top of the user's work. The sound and taskbar flash fire each time another Timer starts ringing, including when one comes back from Snooze, so a second Timer is never missed because the window was already up. The Core keeps a state machine per Timer and tells the presenter which Timers are ringing; Timers still live in memory only.

@@ -26,10 +26,12 @@
         </StackPanel>
         <StackPanel DockPanel.Dock="Bottom" Margin="0,12,0,0">
             <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-                <TextBlock x:Name="TimerStatus" FontWeight="SemiBold" VerticalAlignment="Center" />
-                <Button x:Name="CancelTimerButton" Content="Cancel Timer" Margin="12,0,0,0" Padding="10,2"
-                        Click="CancelTimer_Click" />
+                <TextBlock Text="Timers" FontWeight="SemiBold" VerticalAlignment="Center" />
+                <TextBlock x:Name="NoTimersText" Foreground="Gray" Margin="8,0,0,0" VerticalAlignment="Center" />
+                <Button x:Name="CancelAllTimersButton" Content="Cancel all Timers" Margin="12,0,0,0" Padding="10,2"
+                        Click="CancelAllTimers_Click" />
             </StackPanel>
+            <StackPanel x:Name="TimerList" Margin="0,0,0,6" />
             <local:TimerStarter x:Name="TimerStarter" />
         </StackPanel>
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">

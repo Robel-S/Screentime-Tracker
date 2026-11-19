@@ -4,7 +4,7 @@ using System.Windows.Input;
 
 namespace ScreentimeTracker.App;
 
-/// <summary>Picks or types a Timer duration and asks for a Timer of that length.</summary>
+/// <summary>Takes an optional label, picks or types a Timer duration, and asks for that Timer.</summary>
 public partial class TimerStarter : UserControl
 {
     public TimerStarter()
@@ -23,19 +23,20 @@ public partial class TimerStarter : UserControl
         }
     }
 
-    /// <summary>Raised with the chosen duration when the user starts a Timer.</summary>
-    public event Action<TimeSpan>? StartRequested;
+    /// <summary>Raised with the chosen duration and the label as typed, when the user starts a Timer.</summary>
+    public event Action<TimeSpan, string?>? StartRequested;
 
-    /// <summary>Clears typed minutes and any error, as when the control is shown afresh.</summary>
+    /// <summary>Clears the label, typed minutes and any error, as when the control is shown afresh.</summary>
     public void Clear()
     {
+        LabelBox.Text = "";
         MinutesBox.Text = "";
         ErrorText.Visibility = Visibility.Collapsed;
     }
 
     private void Start_Click(object sender, RoutedEventArgs e) => StartTyped();
 
-    private void MinutesBox_KeyDown(object sender, KeyEventArgs e)
+    private void TypedBox_KeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key != Key.Enter) return;
         // Enter belongs to the box, never to a button elsewhere in the window.
@@ -56,7 +57,9 @@ public partial class TimerStarter : UserControl
 
     private void Request(TimeSpan duration)
     {
+        // The Core treats a blank label as none.
+        var label = LabelBox.Text;
         Clear();
-        StartRequested?.Invoke(duration);
+        StartRequested?.Invoke(duration, label);
     }
 }

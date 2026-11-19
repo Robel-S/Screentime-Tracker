@@ -2,15 +2,17 @@ using System.ComponentModel;
 using System.Media;
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Interop;
 using ScreentimeTracker.Core;
 
 namespace ScreentimeTracker.App;
 
 /// <summary>
-/// The Interruption: an always-on-top window that plays a sound and flashes the taskbar when shown.
-/// It stays until the user picks Snooze, Dismiss or a new Timer; its close button does nothing. The
-/// Core shows and hides it as the Interruption presenter.
+/// The Interruption: an always-on-top window listing every ringing Timer, each with Snooze, Dismiss
+/// and Start another, plus a New Timer starter. It plays a sound and flashes the taskbar each time
+/// another Timer starts ringing, and stays until no Timer is ringing; its close button does nothing.
+/// The Core shows, updates and hides it as the Interruption presenter.
 /// </summary>
 public partial class InterruptionWindow : Window, IInterruptionPresenter
 {
@@ -22,22 +24,26 @@ public partial class InterruptionWindow : Window, IInterruptionPresenter
     public InterruptionWindow()
     {
         InitializeComponent();
-        SnoozeButton.Content = $"Snooze {ScreenTimeTracker.SnoozeLength.TotalMinutes:0} minutes";
-        Starter.StartRequested += duration => StartRequested?.Invoke(duration);
+        Starter.StartRequested += (duration, label) => StartRequested?.Invoke(duration, label);
     }
 
-    /// <summary>Raised when the user picks Snooze.</summary>
-    public event Action? SnoozeRequested;
+    /// <summary>Raised with the Timer when the user Snoozes it.</summary>
+    public event Action<TimerId>? SnoozeRequested;
 
-    /// <summary>Raised when the user picks Dismiss.</summary>
-    public event Action? DismissRequested;
+    /// <summary>Raised with the Timer when the user Dismisses it.</summary>
+    public event Action<TimerId>? DismissRequested;
 
-    /// <summary>Raised with the duration when the user starts a new Timer from the Interruption.</summary>
-    public event Action<TimeSpan>? StartRequested;
+    /// <summary>Raised with the Timer when the user picks Start another on it.</summary>
+    public event Action<TimerId>? StartAnotherRequested;
 
-    void IInterruptionPresenter.Show()
+    /// <summary>Raised with the duration and label as typed when the user starts a New Timer.</summary>
+    public event Action<TimeSpan, string?>? StartRequested;
+
+    void IInterruptionPresenter.Ring(IReadOnlyList<TimerSnapshot> ringing)
     {
-        Starter.Clear();
+        // Keep what the user is typing if the window is already up.
+        if (!IsVisible) Starter.Clear();
+        List(ringing);
         Show();
         if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
         Activate();
@@ -45,7 +51,49 @@ public partial class InterruptionWindow : Window, IInterruptionPresenter
         FlashTaskbar();
     }
 
+    void IInterruptionPresenter.Update(IReadOnlyList<TimerSnapshot> ringing) => List(ringing);
+
     void IInterruptionPresenter.Hide() => Hide();
+
+    /// <summary>Lists the ringing Timers, one row each.</summary>
+    private void List(IReadOnlyList<TimerSnapshot> ringing)
+    {
+        RingingList.Children.Clear();
+        RingingList.RowDefinitions.Clear();
+        var snooze = $"Snooze {ScreenTimeTracker.SnoozeLength.TotalMinutes:0} minutes";
+        foreach (var timer in ringing)
+        {
+            var row = RingingList.RowDefinitions.Count;
+            RingingList.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            var name = new TextBlock
+            {
+                Text = timer.Name,
+                FontSize = 18,
+                VerticalAlignment = VerticalAlignment.Center,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                MaxWidth = 320,
+                Margin = new Thickness(0, 4, 16, 4),
+            };
+            Place(name, row, 0);
+            Place(RowButton(snooze, () => SnoozeRequested?.Invoke(timer.Id)), row, 1);
+            Place(RowButton("Dismiss", () => DismissRequested?.Invoke(timer.Id)), row, 2);
+            Place(RowButton("Start another", () => StartAnotherRequested?.Invoke(timer.Id)), row, 3);
+        }
+    }
+
+    private void Place(UIElement element, int row, int column)
+    {
+        Grid.SetRow(element, row);
+        Grid.SetColumn(element, column);
+        RingingList.Children.Add(element);
+    }
+
+    private static Button RowButton(string text, Action onClick)
+    {
+        var button = new Button { Content = text, Padding = new Thickness(12, 4, 12, 4), Margin = new Thickness(4) };
+        button.Click += (_, _) => onClick();
+        return button;
+    }
 
     public void CloseForQuit()
     {
@@ -59,10 +107,6 @@ public partial class InterruptionWindow : Window, IInterruptionPresenter
         if (!_quitting) e.Cancel = true;
         base.OnClosing(e);
     }
-
-    private void Snooze_Click(object sender, RoutedEventArgs e) => SnoozeRequested?.Invoke();
-
-    private void Dismiss_Click(object sender, RoutedEventArgs e) => DismissRequested?.Invoke();
 
     /// <summary>
     /// Flashes the taskbar button until the window comes to the foreground, for when a fullscreen App

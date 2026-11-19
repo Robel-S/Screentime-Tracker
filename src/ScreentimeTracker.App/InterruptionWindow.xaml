@@ -6,11 +6,15 @@
         Topmost="True" ShowInTaskbar="True" WindowStartupLocation="CenterScreen" Icon="Assets/app.ico">
     <StackPanel Margin="24">
         <TextBlock Text="Time's up" FontSize="28" FontWeight="SemiBold" HorizontalAlignment="Center" />
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,16,0,20">
-            <Button x:Name="SnoozeButton" Padding="16,6" Margin="0,0,8,0" Click="Snooze_Click" />
-            <Button Content="Dismiss" Padding="16,6" Click="Dismiss_Click" />
-        </StackPanel>
-        <TextBlock Text="Start another Timer" Foreground="Gray" Margin="0,0,0,4" />
+        <Grid x:Name="RingingList" Margin="0,16,0,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" MinWidth="160" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+        </Grid>
+        <TextBlock Text="New Timer" Foreground="Gray" Margin="0,0,0,4" />
         <local:TimerStarter x:Name="Starter" />
     </StackPanel>
 </Window>

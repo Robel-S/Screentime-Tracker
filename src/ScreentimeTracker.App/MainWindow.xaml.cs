@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Globalization;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
 using ScreentimeTracker.Core;
@@ -10,14 +11,16 @@ namespace ScreentimeTracker.App;
 /// <summary>
 /// Shows Screen Time for either Today or the Last 7 Days: the period's total and its split by Category,
 /// each Day's totals when looking at the Last 7 Days, and the period's Sources (Apps and Websites) by
-/// Screen Time, most first, each with its Category, which can be changed inline. Also starts, shows
-/// and cancels the Timer. Refreshes while it is visible.
+/// Screen Time, most first, each with its Category, which can be changed inline. Also starts, lists
+/// and cancels Timers. Refreshes while it is visible.
 /// </summary>
 public partial class MainWindow : Window
 {
     private readonly ScreenTimeTracker _tracker;
     private readonly DispatcherTimer _refresher;
     private readonly DispatcherTimer _timerDisplay;
+    /// <summary>The text of each Timer's row, in the order the rows are listed.</summary>
+    private readonly List<(TimerId Id, TextBlock Text)> _timerRows = [];
     private bool _quitting;
     private bool _choosingCategory;
 
@@ -29,9 +32,9 @@ public partial class MainWindow : Window
         _refresher.Tick += (_, _) => Refresh();
         _timerDisplay = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         _timerDisplay.Tick += (_, _) => ShowTimer();
-        TimerStarter.StartRequested += duration =>
+        TimerStarter.StartRequested += (duration, label) =>
         {
-            _tracker.StartTimer(duration);
+            _tracker.StartTimer(duration, label);
             ShowTimer();
         };
         IsVisibleChanged += (_, _) =>
@@ -46,15 +49,43 @@ public partial class MainWindow : Window
         };
     }
 
+    /// <summary>Lists every Timer with its time left and a Cancel button.</summary>
     private void ShowTimer()
     {
-        TimerStatus.Text = TimerText.Describe(_tracker);
-        CancelTimerButton.Visibility = _tracker.TimerState == TimerState.None ? Visibility.Collapsed : Visibility.Visible;
+        var timers = _tracker.Timers;
+        // Rebuild the rows only when the Timers change, so a Cancel button isn't swapped out mid-click.
+        if (!timers.Select(t => t.Id).SequenceEqual(_timerRows.Select(r => r.Id)))
+        {
+            TimerList.Children.Clear();
+            _timerRows.Clear();
+            foreach (var timer in timers)
+            {
+                var text = new TextBlock { VerticalAlignment = VerticalAlignment.Center, MinWidth = 260 };
+                var cancel = new Button { Content = "Cancel", Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(12, 2, 0, 2) };
+                var id = timer.Id;
+                cancel.Click += (_, _) =>
+                {
+                    _tracker.CancelTimer(id);
+                    ShowTimer();
+                };
+                var row = new StackPanel { Orientation = Orientation.Horizontal };
+                row.Children.Add(text);
+                row.Children.Add(cancel);
+                TimerList.Children.Add(row);
+                _timerRows.Add((id, text));
+            }
+        }
+        for (var i = 0; i < timers.Count; i++)
+        {
+            _timerRows[i].Text.Text = TimerText.Describe(timers[i]);
+        }
+        NoTimersText.Text = timers.Count == 0 ? TimerText.NoTimers : "";
+        CancelAllTimersButton.Visibility = timers.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
     }
 
-    private void CancelTimer_Click(object sender, RoutedEventArgs e)
+    private void CancelAllTimers_Click(object sender, RoutedEventArgs e)
     {
-        _tracker.CancelTimer();
+        _tracker.CancelAllTimers();
         ShowTimer();
     }
 

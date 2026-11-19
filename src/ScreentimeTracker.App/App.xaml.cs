@@ -9,8 +9,8 @@ namespace ScreentimeTracker.App;
 
 /// <summary>
 /// The tray host: owns the tracker and the local listener the browser extension reports to, ticks
-/// the tracker about once a second, opens the main window from the tray icon, starts and cancels
-/// the Timer from the tray menu, and hosts the Interruption window. Only one copy runs at a time; a
+/// the tracker about once a second, opens the main window from the tray icon, starts, lists and
+/// cancels Timers from the tray menu, and hosts the Interruption window. Only one copy runs at a time; a
 /// later launch opens the running copy's main window. Starts to the tray. Closing the main window
 /// hides it; only Quit stops the app.
 /// </summary>
@@ -65,7 +65,8 @@ public partial class App : Application
         _tracker = tracker;
         interruption.SnoozeRequested += tracker.Snooze;
         interruption.DismissRequested += tracker.Dismiss;
-        interruption.StartRequested += tracker.StartTimer;
+        interruption.StartAnotherRequested += id => tracker.StartAnother(id);
+        interruption.StartRequested += (duration, label) => tracker.StartTimer(duration, label);
 
         _ticker = new DispatcherTimer(TimeSpan.FromSeconds(1), DispatcherPriority.Background,
             (_, _) => { tracker.Tick(); ShowTimerInTray(); }, Dispatcher);
@@ -76,18 +77,20 @@ public partial class App : Application
 
         var menu = new Forms.ContextMenuStrip();
         menu.Items.Add("Open", null, (_, _) => ShowMainWindow());
-        menu.Items.Add(new Forms.ToolStripSeparator());
-        var timerStatus = new Forms.ToolStripMenuItem { Enabled = false };
-        menu.Items.Add(timerStatus);
+        var timersStart = new Forms.ToolStripSeparator();
+        menu.Items.Add(timersStart);
+        // The Timer items go between these two separators, rebuilt each time the menu opens.
+        var timersEnd = new Forms.ToolStripSeparator();
+        menu.Items.Add(timersEnd);
         menu.Items.Add(TimerMenu(tracker));
-        var cancelTimer = new Forms.ToolStripMenuItem("Cancel Timer", null, (_, _) => tracker.CancelTimer());
-        menu.Items.Add(cancelTimer);
+        var cancelAll = new Forms.ToolStripMenuItem("Cancel all Timers", null, (_, _) => tracker.CancelAllTimers());
+        menu.Items.Add(cancelAll);
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add("Quit", null, (_, _) => Quit());
         menu.Opening += (_, _) =>
         {
-            timerStatus.Text = TimerText.Describe(tracker);
-            cancelTimer.Enabled = tracker.TimerState != TimerState.None;
+            ListTimers(menu, timersStart, timersEnd, tracker);
+            cancelAll.Enabled = tracker.Timers.Count > 0;
         };
 
         _trayIcon = new Forms.NotifyIcon
@@ -103,18 +106,63 @@ public partial class App : Application
         };
     }
 
-    /// <summary>The tray's "Start Timer" menu: preset durations, and a box to type minutes into.</summary>
+    /// <summary>
+    /// Lists every Timer in the tray menu, between <paramref name="timersStart"/> and
+    /// <paramref name="timersEnd"/>: each with its time left and a Cancel item.
+    /// </summary>
+    private static void ListTimers(Forms.ContextMenuStrip menu, Forms.ToolStripItem timersStart,
+        Forms.ToolStripItem timersEnd, ScreenTimeTracker tracker)
+    {
+        var first = menu.Items.IndexOf(timersStart) + 1;
+        while (menu.Items.IndexOf(timersEnd) > first)
+        {
+            var old = menu.Items[first];
+            menu.Items.RemoveAt(first);
+            old.Dispose();
+        }
+        var timers = tracker.Timers;
+        if (timers.Count == 0)
+        {
+            menu.Items.Insert(first, new Forms.ToolStripMenuItem(TimerText.NoTimers) { Enabled = false });
+            return;
+        }
+        for (var i = 0; i < timers.Count; i++)
+        {
+            var id = timers[i].Id;
+            // "&&", so an "&" in a label shows as itself rather than marking a shortcut key.
+            var item = new Forms.ToolStripMenuItem(TimerText.Describe(timers[i]).Replace("&", "&&"));
+            item.DropDownItems.Add("Cancel", null, (_, _) => tracker.CancelTimer(id));
+            menu.Items.Insert(first + i, item);
+        }
+    }
+
+    /// <summary>
+    /// The tray's "Start Timer" menu: an optional label, then preset durations, and a box to type
+    /// minutes into.
+    /// </summary>
     private Forms.ToolStripMenuItem TimerMenu(ScreenTimeTracker tracker)
     {
         const string typeHint = "Or type minutes, then press Enter:";
         var start = new Forms.ToolStripMenuItem("Start Timer");
-        foreach (var preset in TimerDurations.Presets)
-        {
-            start.DropDownItems.Add(TimerDurations.LongLabel(preset), null, (_, _) => tracker.StartTimer(preset));
-        }
-        start.DropDownItems.Add(new Forms.ToolStripSeparator());
+        var label = new Forms.ToolStripTextBox { ToolTipText = "Without a label, the Timer goes by its duration" };
         var hint = new Forms.ToolStripLabel(typeHint);
         var typed = new Forms.ToolStripTextBox();
+        void Start(TimeSpan duration)
+        {
+            tracker.StartTimer(duration, label.Text);
+            label.Text = "";
+            typed.Text = "";
+            hint.Text = typeHint;
+        }
+
+        start.DropDownItems.Add(new Forms.ToolStripLabel("Label (optional):"));
+        start.DropDownItems.Add(label);
+        start.DropDownItems.Add(new Forms.ToolStripSeparator());
+        foreach (var preset in TimerDurations.Presets)
+        {
+            start.DropDownItems.Add(TimerDurations.LongLabel(preset), null, (_, _) => Start(preset));
+        }
+        start.DropDownItems.Add(new Forms.ToolStripSeparator());
         typed.KeyDown += (_, args) =>
         {
             if (args.KeyCode != Forms.Keys.Enter) return;
@@ -125,9 +173,7 @@ public partial class App : Application
                 typed.SelectAll();
                 return;
             }
-            tracker.StartTimer(duration);
-            typed.Text = "";
-            hint.Text = typeHint;
+            Start(duration);
             _trayIcon?.ContextMenuStrip?.Close();
         };
         start.DropDownItems.Add(hint);
@@ -138,9 +184,7 @@ public partial class App : Application
     private void ShowTimerInTray()
     {
         if (_trayIcon is null || _tracker is null) return;
-        _trayIcon.Text = _tracker.TimerState == TimerState.None
-            ? "Screentime Tracker"
-            : $"Screentime Tracker - {TimerText.Describe(_tracker)}";
+        _trayIcon.Text = TimerText.Tooltip(_tracker.Timers);
     }
 
     private static System.Drawing.Icon LoadTrayIcon()

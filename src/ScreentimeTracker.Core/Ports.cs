@@ -48,12 +48,21 @@ public interface IClock
     DateTime Now { get; }
 }
 
-/// <summary>Port: puts the Interruption on screen and takes it away.</summary>
+/// <summary>
+/// Port: puts the one Interruption on screen, keeps it listing every Ringing Timer, and takes it away.
+/// The ringing Timers it is given are ordered by when they rang.
+/// </summary>
 public interface IInterruptionPresenter
 {
-    /// <summary>Shows the Interruption, which stays until <see cref="Hide"/>.</summary>
-    void Show();
+    /// <summary>
+    /// Another Timer has started ringing: shows the Interruption listing these ringing Timers, and calls
+    /// the user's attention to it (sound, taskbar flash). It stays until <see cref="Hide"/>.
+    /// </summary>
+    void Ring(IReadOnlyList<TimerSnapshot> ringing);
 
-    /// <summary>Takes the Interruption off screen.</summary>
+    /// <summary>The ringing Timers changed with none newly ringing: lists these instead. Never empty.</summary>
+    void Update(IReadOnlyList<TimerSnapshot> ringing);
+
+    /// <summary>No Timer is ringing any more: takes the Interruption off screen.</summary>
     void Hide();
 }
