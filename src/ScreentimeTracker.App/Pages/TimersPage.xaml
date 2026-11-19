@@ -20,7 +20,8 @@
             <ui:Button x:Name="CancelAllButton" DockPanel.Dock="Right" Content="Cancel all Timers"
                        Icon="{ui:SymbolIcon Dismiss24}" Click="CancelAll_Click" />
         </DockPanel>
-        <ui:TextBlock x:Name="NoTimersText" DockPanel.Dock="Top" Appearance="Secondary" FontSize="14" />
+        <TextBlock x:Name="NoTimersText" DockPanel.Dock="Top" FontSize="14"
+                   Foreground="{DynamicResource TextFillColorPrimaryBrush}" />
 
         <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel x:Name="TimerList" />
