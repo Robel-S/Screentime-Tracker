@@ -5,7 +5,7 @@
         xmlns:sys="clr-namespace:System;assembly=System.Runtime"
         xmlns:local="clr-namespace:ScreentimeTracker.App"
         Title="Screentime Tracker" Height="720" Width="560"
-        WindowStartupLocation="CenterScreen">
+        WindowStartupLocation="CenterScreen" Icon="Assets/app.ico">
     <Window.Resources>
         <ObjectDataProvider x:Key="Categories" MethodName="GetValues" ObjectType="{x:Type sys:Enum}">
             <ObjectDataProvider.MethodParameters>
@@ -21,6 +21,8 @@
             <TextBlock Text="minutes without input" VerticalAlignment="Center" />
             <Button Content="Apply" Margin="8,0,0,0" Padding="10,2" Click="ApplyIdleThreshold_Click" />
             <TextBlock x:Name="IdleThresholdStatus" Margin="8,0,0,0" VerticalAlignment="Center" Foreground="Gray" />
+            <CheckBox x:Name="RunAtLoginBox" Content="Start when I sign in" Margin="24,0,0,0"
+                      VerticalAlignment="Center" Click="RunAtLoginBox_Click" />
         </StackPanel>
         <StackPanel DockPanel.Dock="Bottom" Margin="0,12,0,0">
             <StackPanel Orientation="Horizontal" Margin="0,0,0,4">

@@ -36,7 +36,12 @@ public partial class MainWindow : Window
         };
         IsVisibleChanged += (_, _) =>
         {
-            if (IsVisible) { Refresh(); ShowIdleThreshold(); ShowTimer(); _refresher.Start(); _timerDisplay.Start(); }
+            if (IsVisible)
+            {
+                Refresh(); ShowIdleThreshold(); ShowTimer();
+                ShowRunAtLogin();
+                _refresher.Start(); _timerDisplay.Start();
+            }
             else { _refresher.Stop(); _timerDisplay.Stop(); }
         };
     }
@@ -57,6 +62,20 @@ public partial class MainWindow : Window
     {
         IdleThresholdBox.Text = _tracker.IdleThreshold.TotalMinutes.ToString("0.##", CultureInfo.CurrentCulture);
         IdleThresholdStatus.Text = "";
+    }
+
+    private void ShowRunAtLogin()
+    {
+        RunAtLoginBox.IsChecked = RunAtLogin.IsEnabled;
+        // A development build must not register itself, or stop the installed copy registering.
+        RunAtLoginBox.IsEnabled = RunAtLogin.IsInstalledCopy;
+        RunAtLoginBox.ToolTip = RunAtLogin.IsInstalledCopy ? null : "Only the installed copy (publish.ps1) can start at sign-in";
+    }
+
+    private void RunAtLoginBox_Click(object sender, RoutedEventArgs e)
+    {
+        RunAtLogin.Set(RunAtLoginBox.IsChecked == true);
+        ShowRunAtLogin();
     }
 
     private void ApplyIdleThreshold_Click(object sender, RoutedEventArgs e) => ApplyIdleThreshold();

@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:ScreentimeTracker.App"
         Title="Time's up" SizeToContent="WidthAndHeight" ResizeMode="NoResize"
-        Topmost="True" ShowInTaskbar="True" WindowStartupLocation="CenterScreen">
+        Topmost="True" ShowInTaskbar="True" WindowStartupLocation="CenterScreen" Icon="Assets/app.ico">
     <StackPanel Margin="24">
         <TextBlock Text="Time's up" FontSize="28" FontWeight="SemiBold" HorizontalAlignment="Center" />
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,16,0,20">

@@ -6,6 +6,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <AssemblyName>ScreentimeTracker</AssemblyName>
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
     <!-- Only for the tray icon (NotifyIcon); WPF has no built-in one. -->
     <UseWindowsForms>true</UseWindowsForms>
     <!-- Required by the source-generated Win32 interop (LibraryImport). -->
@@ -16,6 +18,11 @@
     <!-- Keep WinForms and System.Drawing out of the global namespace so WPF types stay unambiguous. -->
     <Using Remove="System.Windows.Forms" />
     <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The window and tray icon, loaded as a WPF resource. -->
+    <Resource Include="Assets\app.ico" />
   </ItemGroup>
 
   <ItemGroup>

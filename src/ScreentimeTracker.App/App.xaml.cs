@@ -10,8 +10,9 @@ namespace ScreentimeTracker.App;
 /// <summary>
 /// The tray host: owns the tracker and the local listener the browser extension reports to, ticks
 /// the tracker about once a second, opens the main window from the tray icon, starts and cancels
-/// the Timer from the tray menu, and hosts the Interruption window. Closing the main window hides it;
-/// only Quit stops the app.
+/// the Timer from the tray menu, and hosts the Interruption window. Only one copy runs at a time; a
+/// later launch opens the running copy's main window. Starts to the tray. Closing the main window
+/// hides it; only Quit stops the app.
 /// </summary>
 public partial class App : Application
 {
@@ -22,10 +23,23 @@ public partial class App : Application
     private Forms.NotifyIcon? _trayIcon;
     private MainWindow? _mainWindow;
     private InterruptionWindow? _interruption;
+    private SingleInstance? _singleInstance;
 
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+
+        _singleInstance = SingleInstance.Claim();
+        if (_singleInstance is null)
+        {
+            // Another copy is running and has been asked to show its main window.
+            Shutdown();
+            return;
+        }
+        _singleInstance.Listen(
+            onShow: () => Dispatcher.BeginInvoke(ShowMainWindow),
+            onQuit: () => Dispatcher.BeginInvoke(Quit));
+        RunAtLogin.ApplyOnStartup();
 
         var dataDirectory = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ScreentimeTracker");
@@ -78,7 +92,7 @@ public partial class App : Application
 
         _trayIcon = new Forms.NotifyIcon
         {
-            Icon = System.Drawing.SystemIcons.Application,
+            Icon = LoadTrayIcon(),
             Text = "Screentime Tracker",
             ContextMenuStrip = menu,
             Visible = true,
@@ -129,6 +143,12 @@ public partial class App : Application
             : $"Screentime Tracker - {TimerText.Describe(_tracker)}";
     }
 
+    private static System.Drawing.Icon LoadTrayIcon()
+    {
+        using var stream = GetResourceStream(new Uri("pack://application:,,,/Assets/app.ico")).Stream;
+        return new System.Drawing.Icon(stream, Forms.SystemInformation.SmallIconSize);
+    }
+
     private void ShowMainWindow()
     {
         if (_mainWindow is null) return;
@@ -155,6 +175,7 @@ public partial class App : Application
         _tabListener?.Dispose();
         _tracker?.Dispose();
         _signals?.Dispose();
+        _singleInstance?.Dispose();
         base.OnExit(e);
     }
 }
