@@ -3,6 +3,7 @@ using System.Net.Sockets;
 using System.Windows;
 using System.Windows.Threading;
 using ScreentimeTracker.Core;
+using Wpf.Ui.Appearance;
 using Forms = System.Windows.Forms;
 
 namespace ScreentimeTracker.App;
@@ -40,6 +41,8 @@ public partial class App : Application
             onShow: () => Dispatcher.BeginInvoke(ShowMainWindow),
             onQuit: () => Dispatcher.BeginInvoke(Quit));
         RunAtLogin.ApplyOnStartup();
+        ApplicationThemeManager.ApplySystemTheme();
+        CategoryColors.Follow(this);
 
         var dataDirectory = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ScreentimeTracker");

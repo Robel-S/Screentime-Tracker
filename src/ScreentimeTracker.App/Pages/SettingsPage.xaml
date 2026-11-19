@@ -1,0 +1,38 @@
+<Page x:Class="ScreentimeTracker.App.Pages.SettingsPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml"
+      Title="Settings">
+    <StackPanel Margin="36,20,36,28">
+        <ui:TextBlock Text="Settings" FontTypography="TitleLarge" Margin="0,0,0,20" />
+
+        <Border Style="{StaticResource Card}" Margin="0,0,0,12">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <ui:TextBox x:Name="IdleThresholdBox" Width="96" ClearButtonEnabled="False"
+                                KeyDown="IdleThresholdBox_KeyDown" />
+                    <ui:TextBlock Text="minutes" VerticalAlignment="Center" Margin="8,0,12,0" />
+                    <ui:Button Content="Apply" Appearance="Primary" Click="ApplyIdleThreshold_Click" />
+                </StackPanel>
+                <StackPanel VerticalAlignment="Center" Margin="0,0,24,0">
+                    <ui:TextBlock Text="Idle threshold" FontTypography="BodyStrong" FontSize="16" />
+                    <ui:TextBlock Text="With no keyboard or mouse input for this long, time stops counting as Screen Time."
+                                  Appearance="Secondary" TextWrapping="Wrap" Margin="0,2,0,0" />
+                    <ui:TextBlock x:Name="IdleThresholdStatus" Appearance="Secondary" Margin="0,6,0,0" Visibility="Collapsed" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <Border Style="{StaticResource Card}">
+            <DockPanel>
+                <ui:ToggleSwitch x:Name="RunAtLoginSwitch" DockPanel.Dock="Right" VerticalAlignment="Center"
+                                 Click="RunAtLoginSwitch_Click" />
+                <StackPanel VerticalAlignment="Center" Margin="0,0,24,0">
+                    <ui:TextBlock Text="Start when I sign in" FontTypography="BodyStrong" FontSize="16" />
+                    <ui:TextBlock x:Name="RunAtLoginHint"
+                                  Appearance="Secondary" TextWrapping="Wrap" Margin="0,2,0,0" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+    </StackPanel>
+</Page>

@@ -15,8 +15,9 @@ public partial class TimerStarter : UserControl
             var button = new Button
             {
                 Content = TimerDurations.ShortLabel(preset),
-                Padding = new Thickness(8, 2, 8, 2),
-                Margin = new Thickness(0, 0, 4, 0),
+                MinWidth = 52,
+                Padding = new Thickness(12, 6, 12, 6),
+                Margin = new Thickness(0, 0, 6, 6),
             };
             button.Click += (_, _) => Request(preset);
             PresetButtons.Children.Add(button);

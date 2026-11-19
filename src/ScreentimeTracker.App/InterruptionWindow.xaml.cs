@@ -5,16 +5,17 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
 using ScreentimeTracker.Core;
+using Ui = Wpf.Ui.Controls;
 
 namespace ScreentimeTracker.App;
 
 /// <summary>
-/// The Interruption: an always-on-top window listing every ringing Timer, each with Snooze, Dismiss
-/// and Start another, plus a New Timer starter. It plays a sound and flashes the taskbar each time
+/// The Interruption: an always-on-top window, centred and not fullscreen, listing every ringing
+/// Timer, each with big Snooze and Dismiss buttons and a Start another, plus a New Timer starter. It plays a sound and flashes the taskbar each time
 /// another Timer starts ringing, and stays until no Timer is ringing; its close button does nothing.
 /// The Core shows, updates and hides it as the Interruption presenter.
 /// </summary>
-public partial class InterruptionWindow : Window, IInterruptionPresenter
+public partial class InterruptionWindow : Ui.FluentWindow, IInterruptionPresenter
 {
     private const uint FlashAll = 0x3; // FLASHW_ALL
     private const uint FlashUntilForeground = 0xC; // FLASHW_TIMERNOFG
@@ -24,6 +25,13 @@ public partial class InterruptionWindow : Window, IInterruptionPresenter
     public InterruptionWindow()
     {
         InitializeComponent();
+        ThemeFollower.Follow(this);
+        // The height follows the ringing Timers; grow and shrink about the middle so it stays centred.
+        SizeChanged += (_, e) =>
+        {
+            if (IsLoaded && e.PreviousSize.Height > 0 && e.HeightChanged)
+                Top -= (e.NewSize.Height - e.PreviousSize.Height) / 2;
+        };
         Starter.StartRequested += (duration, label) => StartRequested?.Invoke(duration, label);
     }
 
@@ -55,42 +63,64 @@ public partial class InterruptionWindow : Window, IInterruptionPresenter
 
     void IInterruptionPresenter.Hide() => Hide();
 
-    /// <summary>Lists the ringing Timers, one row each.</summary>
+    /// <summary>Lists the ringing Timers, one card each.</summary>
     private void List(IReadOnlyList<TimerSnapshot> ringing)
     {
         RingingList.Children.Clear();
-        RingingList.RowDefinitions.Clear();
         var snooze = $"Snooze {ScreenTimeTracker.SnoozeLength.TotalMinutes:0} minutes";
         foreach (var timer in ringing)
         {
-            var row = RingingList.RowDefinitions.Count;
-            RingingList.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
             var name = new TextBlock
             {
                 Text = timer.Name,
-                FontSize = 18,
-                VerticalAlignment = VerticalAlignment.Center,
+                FontSize = 22,
+                FontWeight = FontWeights.SemiBold,
                 TextTrimming = TextTrimming.CharacterEllipsis,
-                MaxWidth = 320,
-                Margin = new Thickness(0, 4, 16, 4),
+                Margin = new Thickness(0, 0, 0, 14),
             };
-            Place(name, row, 0);
-            Place(RowButton(snooze, () => SnoozeRequested?.Invoke(timer.Id)), row, 1);
-            Place(RowButton("Dismiss", () => DismissRequested?.Invoke(timer.Id)), row, 2);
-            Place(RowButton("Start another", () => StartAnotherRequested?.Invoke(timer.Id)), row, 3);
+            name.SetResourceReference(TextBlock.ForegroundProperty, "TextFillColorPrimaryBrush");
+
+            var buttons = new Grid();
+            buttons.ColumnDefinitions.Add(new ColumnDefinition());
+            buttons.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(10) });
+            buttons.ColumnDefinitions.Add(new ColumnDefinition());
+            var snoozeButton = BigButton(snooze, Ui.ControlAppearance.Primary, () => SnoozeRequested?.Invoke(timer.Id));
+            var dismissButton = BigButton("Dismiss", Ui.ControlAppearance.Secondary, () => DismissRequested?.Invoke(timer.Id));
+            Grid.SetColumn(dismissButton, 2);
+            buttons.Children.Add(snoozeButton);
+            buttons.Children.Add(dismissButton);
+
+            var startAnother = new Ui.Button
+            {
+                Content = "Start another",
+                Appearance = Ui.ControlAppearance.Transparent,
+                Icon = new Ui.SymbolIcon(Ui.SymbolRegular.ArrowRepeatAll24),
+                HorizontalAlignment = HorizontalAlignment.Right,
+                Margin = new Thickness(0, 8, 0, 0),
+            };
+            startAnother.Click += (_, _) => StartAnotherRequested?.Invoke(timer.Id);
+
+            var content = new StackPanel();
+            content.Children.Add(name);
+            content.Children.Add(buttons);
+            content.Children.Add(startAnother);
+            var card = new Border { Padding = new Thickness(20, 16, 20, 12), Margin = new Thickness(0, 0, 0, 10), Child = content };
+            card.SetResourceReference(StyleProperty, "Card");
+            RingingList.Children.Add(card);
         }
     }
 
-    private void Place(UIElement element, int row, int column)
+    private static Ui.Button BigButton(string text, Ui.ControlAppearance appearance, Action onClick)
     {
-        Grid.SetRow(element, row);
-        Grid.SetColumn(element, column);
-        RingingList.Children.Add(element);
-    }
-
-    private static Button RowButton(string text, Action onClick)
-    {
-        var button = new Button { Content = text, Padding = new Thickness(12, 4, 12, 4), Margin = new Thickness(4) };
+        var button = new Ui.Button
+        {
+            Content = text,
+            Appearance = appearance,
+            FontSize = 16,
+            Height = 48,
+            HorizontalAlignment = HorizontalAlignment.Stretch,
+            HorizontalContentAlignment = HorizontalAlignment.Center,
+        };
         button.Click += (_, _) => onClick();
         return button;
     }

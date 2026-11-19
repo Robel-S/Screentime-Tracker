@@ -1,19 +1,21 @@
 <UserControl x:Class="ScreentimeTracker.App.TimerStarter"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.lepo.co/wpfui/2022/xaml">
     <StackPanel>
-        <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
-            <TextBlock Text="Label" Foreground="Gray" VerticalAlignment="Center" Margin="0,0,6,0" />
-            <TextBox x:Name="LabelBox" Width="200" VerticalContentAlignment="Center" KeyDown="TypedBox_KeyDown"
-                     ToolTip="Optional. Without one, the Timer goes by its duration." />
-            <TextBlock Text="(optional)" Foreground="Gray" Margin="6,0,0,0" VerticalAlignment="Center" />
-        </StackPanel>
-        <StackPanel Orientation="Horizontal">
-            <StackPanel x:Name="PresetButtons" Orientation="Horizontal" Margin="0,0,8,0" />
-            <TextBox x:Name="MinutesBox" Width="48" VerticalContentAlignment="Center" KeyDown="TypedBox_KeyDown" />
-            <TextBlock Text="minutes" Margin="6,0" VerticalAlignment="Center" />
-            <Button Content="Start" Padding="10,2" Click="Start_Click" />
-        </StackPanel>
-        <TextBlock x:Name="ErrorText" Foreground="Firebrick" Margin="0,4,0,0" Visibility="Collapsed" />
+        <ui:TextBox x:Name="LabelBox" MaxWidth="360" HorizontalAlignment="Left" MinWidth="280" Margin="0,0,0,12"
+                    PlaceholderText="Label (optional)" KeyDown="TypedBox_KeyDown"
+                    ToolTip="Without a label, the Timer goes by its duration." />
+        <WrapPanel Orientation="Horizontal">
+            <WrapPanel x:Name="PresetButtons" Orientation="Horizontal" Margin="0,0,8,0" />
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
+                <ui:TextBox x:Name="MinutesBox" Width="96" PlaceholderText="Minutes" KeyDown="TypedBox_KeyDown"
+                            ClearButtonEnabled="False" />
+                <ui:Button Content="Start" Appearance="Primary" Margin="8,0,0,0" Padding="18,6"
+                           Icon="{ui:SymbolIcon Play24}" Click="Start_Click" />
+            </StackPanel>
+        </WrapPanel>
+        <TextBlock x:Name="ErrorText" Margin="0,6,0,0" Visibility="Collapsed"
+                   Foreground="{DynamicResource SystemFillColorCriticalBrush}" />
     </StackPanel>
 </UserControl>

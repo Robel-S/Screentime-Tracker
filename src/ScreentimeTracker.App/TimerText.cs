@@ -13,11 +13,14 @@ internal static class TimerText
     private const int MaxTooltipLength = 127;
 
     /// <summary>One Timer's name and where it is, such as "Tea: 4:12 left".</summary>
-    public static string Describe(TimerSnapshot timer) => timer.State switch
+    public static string Describe(TimerSnapshot timer) => $"{timer.Name}: {Status(timer)}";
+
+    /// <summary>Where one Timer is, such as "4:12 left" or "time's up".</summary>
+    public static string Status(TimerSnapshot timer) => timer.State switch
     {
-        TimerState.Running => $"{timer.Name}: {Format(timer.Remaining)} left",
-        TimerState.Ringing => $"{timer.Name}: time's up",
-        TimerState.Snoozed => $"{timer.Name}: snoozed, rings in {Format(timer.Remaining)}",
+        TimerState.Running => $"{Format(timer.Remaining)} left",
+        TimerState.Ringing => "time's up",
+        TimerState.Snoozed => $"snoozed, rings in {Format(timer.Remaining)}",
         _ => throw new ArgumentOutOfRangeException(nameof(timer), timer.State, null),
     };
 
