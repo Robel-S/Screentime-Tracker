@@ -47,3 +47,13 @@ public interface IClock
 {
     DateTime Now { get; }
 }
+
+/// <summary>Port: puts the Interruption on screen and takes it away.</summary>
+public interface IInterruptionPresenter
+{
+    /// <summary>Shows the Interruption, which stays until <see cref="Hide"/>.</summary>
+    void Show();
+
+    /// <summary>Takes the Interruption off screen.</summary>
+    void Hide();
+}

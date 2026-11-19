@@ -3,7 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:core="clr-namespace:ScreentimeTracker.Core;assembly=ScreentimeTracker.Core"
         xmlns:sys="clr-namespace:System;assembly=System.Runtime"
-        Title="Screentime Tracker" Height="640" Width="560"
+        xmlns:local="clr-namespace:ScreentimeTracker.App"
+        Title="Screentime Tracker" Height="720" Width="560"
         WindowStartupLocation="CenterScreen">
     <Window.Resources>
         <ObjectDataProvider x:Key="Categories" MethodName="GetValues" ObjectType="{x:Type sys:Enum}">
@@ -20,6 +21,14 @@
             <TextBlock Text="minutes without input" VerticalAlignment="Center" />
             <Button Content="Apply" Margin="8,0,0,0" Padding="10,2" Click="ApplyIdleThreshold_Click" />
             <TextBlock x:Name="IdleThresholdStatus" Margin="8,0,0,0" VerticalAlignment="Center" Foreground="Gray" />
+        </StackPanel>
+        <StackPanel DockPanel.Dock="Bottom" Margin="0,12,0,0">
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                <TextBlock x:Name="TimerStatus" FontWeight="SemiBold" VerticalAlignment="Center" />
+                <Button x:Name="CancelTimerButton" Content="Cancel Timer" Margin="12,0,0,0" Padding="10,2"
+                        Click="CancelTimer_Click" />
+            </StackPanel>
+            <local:TimerStarter x:Name="TimerStarter" />
         </StackPanel>
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
             <RadioButton x:Name="TodayOption" Content="Today" GroupName="Period" IsChecked="True"

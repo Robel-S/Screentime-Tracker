@@ -95,11 +95,14 @@ public sealed class ScreenTimeTracker : IDisposable
     private readonly ISystemSignals _signals;
     private readonly IActiveTabFeed _tabs;
     private readonly IClock _clock;
+    private readonly TimerStateMachine _timer;
     private OpenRecord? _open;
     private DateTime? _lastTick;
 
-    private ScreenTimeTracker(SqliteStore store, ISystemSignals signals, IActiveTabFeed tabs, IClock clock)
+    private ScreenTimeTracker(SqliteStore store, ISystemSignals signals, IActiveTabFeed tabs,
+        IInterruptionPresenter presenter, IClock clock)
     {
+        _timer = new TimerStateMachine(presenter);
         _store = store;
         _signals = signals;
         _tabs = tabs;
@@ -107,8 +110,9 @@ public sealed class ScreenTimeTracker : IDisposable
         IdleThreshold = ReadIdleThreshold(store);
     }
 
-    public static ScreenTimeTracker Open(string databasePath, ISystemSignals signals, IActiveTabFeed tabs, IClock clock)
-        => new(new SqliteStore(databasePath), signals, tabs, clock);
+    public static ScreenTimeTracker Open(string databasePath, ISystemSignals signals, IActiveTabFeed tabs,
+        IInterruptionPresenter presenter, IClock clock)
+        => new(new SqliteStore(databasePath), signals, tabs, presenter, clock);
 
     /// <summary>How long without input before the user is Idle. Persisted; defaults to two minutes.</summary>
     public TimeSpan IdleThreshold { get; private set; }
@@ -128,10 +132,11 @@ public sealed class ScreenTimeTracker : IDisposable
         IdleThreshold = threshold;
     }
 
-    /// <summary>Samples the system signals and accrues the time since the last tick.</summary>
+    /// <summary>Samples the system signals, accrues the time since the last tick, and moves the Timer on.</summary>
     public void Tick()
     {
         var now = _clock.Now;
+        _timer.Tick(now);
 
         // No ticks for a long while means the machine was asleep or the host stalled; that gap is
         // not Screen Time, so the open record ends at the last tick before it.
@@ -202,6 +207,33 @@ public sealed class ScreenTimeTracker : IDisposable
     /// <param name="key">The Source's <see cref="SourceTime.Key"/>.</param>
     public void SetCategory(SourceKind kind, string key, Category category) =>
         _store.SetCategory(kind, key, category);
+
+    /// <summary>Where the Timer is now.</summary>
+    public TimerState TimerState => _timer.State;
+
+    /// <summary>How long until the running Timer runs out, or null when no Timer is running.</summary>
+    public TimeSpan? TimerRemaining => _timer.Remaining(_clock.Now);
+
+    /// <summary>
+    /// Starts a Timer that runs out after <paramref name="duration"/>. Only one Timer runs at a time,
+    /// so this replaces any there is, and hides the Interruption if it is showing.
+    /// </summary>
+    public void StartTimer(TimeSpan duration) => _timer.Start(duration, _clock.Now);
+
+    /// <summary>Ends the Timer in whatever state it is, hiding the Interruption if it is showing.</summary>
+    public void CancelTimer() => _timer.Cancel();
+
+    /// <summary>Dismisses the Interruption, which ends the Timer. Does nothing unless the Timer is Ringing.</summary>
+    public void Dismiss() => _timer.Dismiss();
+
+    /// <summary>How long a Snooze hides the Interruption for.</summary>
+    public static TimeSpan SnoozeLength => TimerStateMachine.SnoozeLength;
+
+    /// <summary>
+    /// Hides the Interruption and shows it again after <see cref="SnoozeLength"/>. Does nothing unless
+    /// the Timer is Ringing.
+    /// </summary>
+    public void Snooze() => _timer.Snooze(_clock.Now);
 
     public void Dispose()
     {

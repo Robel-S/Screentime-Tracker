@@ -10,13 +10,14 @@ namespace ScreentimeTracker.App;
 /// <summary>
 /// Shows Screen Time for either Today or the Last 7 Days: the period's total and its split by Category,
 /// each Day's totals when looking at the Last 7 Days, and the period's Sources (Apps and Websites) by
-/// Screen Time, most first, each with its Category, which can be changed inline. Refreshes while it is
-/// visible.
+/// Screen Time, most first, each with its Category, which can be changed inline. Also starts, shows
+/// and cancels the Timer. Refreshes while it is visible.
 /// </summary>
 public partial class MainWindow : Window
 {
     private readonly ScreenTimeTracker _tracker;
     private readonly DispatcherTimer _refresher;
+    private readonly DispatcherTimer _timerDisplay;
     private bool _quitting;
     private bool _choosingCategory;
 
@@ -26,11 +27,30 @@ public partial class MainWindow : Window
         _tracker = tracker;
         _refresher = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
         _refresher.Tick += (_, _) => Refresh();
+        _timerDisplay = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        _timerDisplay.Tick += (_, _) => ShowTimer();
+        TimerStarter.StartRequested += duration =>
+        {
+            _tracker.StartTimer(duration);
+            ShowTimer();
+        };
         IsVisibleChanged += (_, _) =>
         {
-            if (IsVisible) { Refresh(); ShowIdleThreshold(); _refresher.Start(); }
-            else _refresher.Stop();
+            if (IsVisible) { Refresh(); ShowIdleThreshold(); ShowTimer(); _refresher.Start(); _timerDisplay.Start(); }
+            else { _refresher.Stop(); _timerDisplay.Stop(); }
         };
+    }
+
+    private void ShowTimer()
+    {
+        TimerStatus.Text = TimerText.Describe(_tracker);
+        CancelTimerButton.Visibility = _tracker.TimerState == TimerState.None ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    private void CancelTimer_Click(object sender, RoutedEventArgs e)
+    {
+        _tracker.CancelTimer();
+        ShowTimer();
     }
 
     private void ShowIdleThreshold()

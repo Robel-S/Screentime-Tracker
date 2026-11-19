@@ -24,7 +24,7 @@ public sealed class TrackerHarness : IDisposable
         seedDatabase?.Invoke(_databasePath);
         Signals = new FakeSystemSignals(Clock);
         Tabs = new FakeTabFeed(Clock);
-        Tracker = ScreenTimeTracker.Open(_databasePath, Signals, Tabs, Clock);
+        Tracker = ScreenTimeTracker.Open(_databasePath, Signals, Tabs, Presenter, Clock);
     }
 
     private readonly string _databasePath;
@@ -32,6 +32,7 @@ public sealed class TrackerHarness : IDisposable
 
     public FakeSystemSignals Signals { get; }
     public FakeTabFeed Tabs { get; }
+    public RecordingPresenter Presenter { get; } = new();
     public ScreenTimeTracker Tracker { get; private set; }
 
     public DateOnly Today => DateOnly.FromDateTime(Clock.Now);
@@ -70,13 +71,13 @@ public sealed class TrackerHarness : IDisposable
     public void Restart()
     {
         Tracker.Dispose();
-        Tracker = ScreenTimeTracker.Open(_databasePath, Signals, Tabs, Clock);
+        Tracker = ScreenTimeTracker.Open(_databasePath, Signals, Tabs, Presenter, Clock);
     }
 
     /// <summary>Abandons the running tracker without shutting it down, as a crash would, and opens a fresh one.</summary>
     public void CrashAndRestart()
     {
-        Tracker = ScreenTimeTracker.Open(_databasePath, Signals, Tabs, Clock);
+        Tracker = ScreenTimeTracker.Open(_databasePath, Signals, Tabs, Presenter, Clock);
     }
 
     /// <summary>
