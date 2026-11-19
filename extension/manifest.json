@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "Screentime Tracker",
+  "version": "1.0.0",
+  "description": "Reports the active tab's URL to the Screentime Tracker app running on this computer. Nothing leaves the machine.",
+  "minimum_chrome_version": "120",
+  "permissions": ["tabs", "alarms"],
+  "host_permissions": ["http://127.0.0.1/*"],
+  "background": {
+    "service_worker": "background.js"
+  }
+}

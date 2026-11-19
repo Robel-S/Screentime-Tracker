@@ -19,13 +19,15 @@ public sealed class TrackerHarness : IDisposable
         Directory.CreateDirectory(_directory);
         _databasePath = Path.Combine(_directory, "screentime.db");
         Signals = new FakeSystemSignals(Clock);
-        Tracker = ScreenTimeTracker.Open(_databasePath, Signals, Clock);
+        Tabs = new FakeTabFeed(Clock);
+        Tracker = ScreenTimeTracker.Open(_databasePath, Signals, Tabs, Clock);
     }
 
     private readonly string _databasePath;
     private FakeClock Clock { get; } = new(Morning);
 
     public FakeSystemSignals Signals { get; }
+    public FakeTabFeed Tabs { get; }
     public ScreenTimeTracker Tracker { get; private set; }
 
     public DateOnly Today => DateOnly.FromDateTime(Clock.Now);
@@ -53,24 +55,34 @@ public sealed class TrackerHarness : IDisposable
         RunFor(duration);
     }
 
+    /// <summary>Brings the browser to the front with its active tab on the URL, and runs.</summary>
+    public void Browse(AppIdentity browser, string? url, TimeSpan duration)
+    {
+        Tabs.Show(browser.Browser!.Value, url);
+        Use(browser, duration);
+    }
+
     /// <summary>Shuts the tracker down cleanly and opens a fresh one on the same database.</summary>
     public void Restart()
     {
         Tracker.Dispose();
-        Tracker = ScreenTimeTracker.Open(_databasePath, Signals, Clock);
+        Tracker = ScreenTimeTracker.Open(_databasePath, Signals, Tabs, Clock);
     }
 
     /// <summary>Abandons the running tracker without shutting it down, as a crash would, and opens a fresh one.</summary>
     public void CrashAndRestart()
     {
-        Tracker = ScreenTimeTracker.Open(_databasePath, Signals, Clock);
+        Tracker = ScreenTimeTracker.Open(_databasePath, Signals, Tabs, Clock);
     }
 
     public IReadOnlyList<SourceTime> TodaysSources() => Tracker.SourcesOn(Today);
 
     /// <summary>Today's Screen Time for the App, found by the name the user sees in the list.</summary>
-    public TimeSpan TimeFor(AppIdentity app) =>
-        TodaysSources().SingleOrDefault(s => s.DisplayName == app.DisplayName)?.ScreenTime ?? TimeSpan.Zero;
+    public TimeSpan TimeFor(AppIdentity app) => TimeFor(app.DisplayName);
+
+    /// <summary>Today's Screen Time for the Source the user sees under this name, such as a Website's hostname.</summary>
+    public TimeSpan TimeFor(string displayName) =>
+        TodaysSources().SingleOrDefault(s => s.DisplayName == displayName)?.ScreenTime ?? TimeSpan.Zero;
 
     public void Dispose()
     {

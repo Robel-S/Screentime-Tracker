@@ -1,4 +1,5 @@
 using System.IO;
+using System.Net.Sockets;
 using System.Windows;
 using System.Windows.Threading;
 using ScreentimeTracker.Core;
@@ -7,12 +8,13 @@ using Forms = System.Windows.Forms;
 namespace ScreentimeTracker.App;
 
 /// <summary>
-/// The tray host: owns the tracker, ticks it about once a second, and opens the main window from
-/// the tray icon. Closing the main window hides it; only Quit stops the app.
+/// The tray host: owns the tracker and the local listener the browser extension reports to, ticks
+/// the tracker about once a second, and opens the main window from the tray icon. Closing the main window hides it; only Quit stops the app.
 /// </summary>
 public partial class App : Application
 {
     private Win32SystemSignals? _signals;
+    private LocalTabListener? _tabListener;
     private ScreenTimeTracker? _tracker;
     private DispatcherTimer? _ticker;
     private Forms.NotifyIcon? _trayIcon;
@@ -26,9 +28,21 @@ public partial class App : Application
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ScreentimeTracker");
         Directory.CreateDirectory(dataDirectory);
 
+        var clock = new SystemClock();
         _signals = new Win32SystemSignals();
+        var tabs = new ActiveTabFeed(clock);
+        try
+        {
+            _tabListener = LocalTabListener.Start(tabs);
+        }
+        catch (SocketException)
+        {
+            // The port is taken (perhaps by another copy of the app). Browser time then goes to the
+            // browser App, as it does whenever the extension can't report.
+        }
+
         var tracker = ScreenTimeTracker.Open(
-            Path.Combine(dataDirectory, "screentime.db"), _signals, new SystemClock());
+            Path.Combine(dataDirectory, "screentime.db"), _signals, tabs, clock);
         _tracker = tracker;
 
         _ticker = new DispatcherTimer(TimeSpan.FromSeconds(1), DispatcherPriority.Background,
@@ -77,6 +91,7 @@ public partial class App : Application
             _trayIcon.Visible = false;
             _trayIcon.Dispose();
         }
+        _tabListener?.Dispose();
         _tracker?.Dispose();
         _signals?.Dispose();
         base.OnExit(e);

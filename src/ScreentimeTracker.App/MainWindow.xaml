@@ -16,7 +16,7 @@
         <ListView x:Name="SourceList">
             <ListView.View>
                 <GridView>
-                    <GridViewColumn Header="App" Width="250" DisplayMemberBinding="{Binding Name}" />
+                    <GridViewColumn Header="App or Website" Width="250" DisplayMemberBinding="{Binding Name}" />
                     <GridViewColumn Header="Time" Width="100" DisplayMemberBinding="{Binding Time}" />
                 </GridView>
             </ListView.View>

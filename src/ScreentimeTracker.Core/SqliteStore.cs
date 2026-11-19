@@ -8,8 +8,6 @@ namespace ScreentimeTracker.Core;
 /// </summary>
 internal sealed class SqliteStore : IDisposable
 {
-    private const string AppKind = "App";
-
     private readonly SqliteConnection _connection;
 
     public SqliteStore(string databasePath)
@@ -64,8 +62,8 @@ internal sealed class SqliteStore : IDisposable
         command.ExecuteNonQuery();
     }
 
-    /// <summary>Records the App as a Source, refreshing its display name, and returns its id.</summary>
-    public long SaveApp(string key, string displayName)
+    /// <summary>Records the Source, refreshing its display name, and returns its id.</summary>
+    public long SaveSource(SourceKind kind, string key, string displayName)
     {
         using var command = _connection.CreateCommand();
         command.CommandText = """
@@ -73,7 +71,7 @@ internal sealed class SqliteStore : IDisposable
             ON CONFLICT (kind, key) DO UPDATE SET display_name = excluded.display_name
             RETURNING id;
             """;
-        command.Parameters.AddWithValue("$kind", AppKind);
+        command.Parameters.AddWithValue("$kind", kind.ToString());
         command.Parameters.AddWithValue("$key", key);
         command.Parameters.AddWithValue("$name", displayName);
         return (long)command.ExecuteScalar()!;
@@ -105,7 +103,7 @@ internal sealed class SqliteStore : IDisposable
     {
         using var command = _connection.CreateCommand();
         command.CommandText = """
-            SELECT s.key, s.display_name,
+            SELECT s.kind, s.key, s.display_name,
                    SUM(MIN(r.end_time, $to) - MAX(r.start_time, $from)) AS total
             FROM time_records r
             JOIN sources s ON s.id = r.source_id
@@ -121,7 +119,11 @@ internal sealed class SqliteStore : IDisposable
         using var reader = command.ExecuteReader();
         while (reader.Read())
         {
-            result.Add(new SourceTime(reader.GetString(0), reader.GetString(1), TimeSpan.FromTicks(reader.GetInt64(2))));
+            result.Add(new SourceTime(
+                Enum.Parse<SourceKind>(reader.GetString(0)),
+                reader.GetString(1),
+                reader.GetString(2),
+                TimeSpan.FromTicks(reader.GetInt64(3))));
         }
         return result;
     }

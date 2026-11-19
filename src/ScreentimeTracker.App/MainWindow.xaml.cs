@@ -7,7 +7,7 @@ using ScreentimeTracker.Core;
 
 namespace ScreentimeTracker.App;
 
-/// <summary>Lists today's Apps by Screen Time, most first. Refreshes while it is visible.</summary>
+/// <summary>Lists today's Sources (Apps and Websites) by Screen Time, most first. Refreshes while it is visible.</summary>
 public partial class MainWindow : Window
 {
     private readonly ScreenTimeTracker _tracker;

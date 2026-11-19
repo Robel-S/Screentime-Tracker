@@ -146,10 +146,20 @@ internal sealed partial class Win32SystemSignals : ISystemSignals, IDisposable
         }
         catch (Exception) { }
 
+        var executable = Path.GetFileName(path);
         return new AppIdentity(
-            Path.GetFileName(path),
-            string.IsNullOrEmpty(description) ? Path.GetFileNameWithoutExtension(path) : description);
+            executable,
+            string.IsNullOrEmpty(description) ? Path.GetFileNameWithoutExtension(path) : description,
+            Browser: SupportedBrowserFor(executable));
     }
+
+    /// <summary>The supported browsers, by executable. Their extension reports the Website in the active tab.</summary>
+    private static SupportedBrowser? SupportedBrowserFor(string executable) => executable.ToLowerInvariant() switch
+    {
+        "msedge.exe" => SupportedBrowser.Edge,
+        "brave.exe" => SupportedBrowser.Brave,
+        _ => null,
+    };
 
     /// <summary>
     /// Fallback for processes this user can't open, such as elevated ones. Their name is still
@@ -160,7 +170,8 @@ internal sealed partial class Win32SystemSignals : ISystemSignals, IDisposable
         try
         {
             using var process = Process.GetProcessById((int)processId);
-            return new AppIdentity(process.ProcessName + ".exe", process.ProcessName);
+            var executable = process.ProcessName + ".exe";
+            return new AppIdentity(executable, process.ProcessName, Browser: SupportedBrowserFor(executable));
         }
         catch (Exception)
         {
