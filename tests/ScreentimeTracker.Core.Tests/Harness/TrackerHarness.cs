@@ -13,11 +13,15 @@ public sealed class TrackerHarness : IDisposable
 
     private readonly string _directory;
 
-    public TrackerHarness()
+    public TrackerHarness() : this(seedDatabase: null) { }
+
+    /// <param name="seedDatabase">Writes a database file at the given path before the tracker opens it, as an older version would have left it.</param>
+    public TrackerHarness(Action<string>? seedDatabase)
     {
         _directory = Path.Combine(Path.GetTempPath(), "screentime-tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(_directory);
         _databasePath = Path.Combine(_directory, "screentime.db");
+        seedDatabase?.Invoke(_databasePath);
         Signals = new FakeSystemSignals(Clock);
         Tabs = new FakeTabFeed(Clock);
         Tracker = ScreenTimeTracker.Open(_databasePath, Signals, Tabs, Clock);
@@ -75,7 +79,43 @@ public sealed class TrackerHarness : IDisposable
         Tracker = ScreenTimeTracker.Open(_databasePath, Signals, Tabs, Clock);
     }
 
+    /// <summary>
+    /// A harness on a database as it was before Categories existed, already holding six minutes of
+    /// Notepad from earlier today.
+    /// </summary>
+    public static TrackerHarness WithPreCategoriesDatabase() => new(path =>
+    {
+        using var connection = new SqliteConnection($"Data Source={path};Pooling=False");
+        connection.Open();
+        using var command = connection.CreateCommand();
+        var start = Morning.AddHours(-1);
+        command.CommandText = $"""
+            CREATE TABLE sources (
+                id INTEGER PRIMARY KEY, kind TEXT NOT NULL, key TEXT NOT NULL, display_name TEXT NOT NULL,
+                UNIQUE (kind, key));
+            CREATE TABLE time_records (
+                id INTEGER PRIMARY KEY, source_id INTEGER NOT NULL REFERENCES sources (id),
+                start_time INTEGER NOT NULL, end_time INTEGER NOT NULL);
+            INSERT INTO sources (id, kind, key, display_name) VALUES (1, 'App', 'notepad.exe', 'Notepad');
+            INSERT INTO time_records (source_id, start_time, end_time)
+                VALUES (1, {start.Ticks}, {start.AddMinutes(6).Ticks});
+            """;
+        command.ExecuteNonQuery();
+    });
+
     public IReadOnlyList<SourceTime> TodaysSources() => Tracker.SourcesOn(Today);
+
+    public DayTotals TodaysTotals() => Tracker.TotalsOn(Today);
+
+    /// <summary>Sets the Category of the App as the user would, by picking it on the App's row in today's list.</summary>
+    public void Categorize(AppIdentity app, Category category) => Categorize(app.DisplayName, category);
+
+    /// <summary>Sets the Category of the Source shown under this name in today's list, such as a Website's hostname.</summary>
+    public void Categorize(string displayName, Category category)
+    {
+        var source = TodaysSources().Single(s => s.DisplayName == displayName);
+        Tracker.SetCategory(source.Kind, source.Key, category);
+    }
 
     /// <summary>Today's Screen Time for the App, found by the name the user sees in the list.</summary>
     public TimeSpan TimeFor(AppIdentity app) => TimeFor(app.DisplayName);

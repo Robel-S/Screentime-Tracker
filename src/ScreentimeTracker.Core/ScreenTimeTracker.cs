@@ -9,9 +9,42 @@ public enum SourceKind
     Website,
 }
 
+/// <summary>The label a Source belongs to. Every newly seen Source starts Uncategorized.</summary>
+public enum Category
+{
+    Uncategorized,
+    Productive,
+    Entertainment,
+}
+
 /// <summary>Screen Time attributed to one Source over a period.</summary>
 /// <param name="Key">What identifies the Source: for an App, its executable; for a Website, its hostname.</param>
-public sealed record SourceTime(SourceKind Kind, string Key, string DisplayName, TimeSpan ScreenTime);
+/// <param name="Category">The Source's Category now, which applies to all of its time, past and future.</param>
+public sealed record SourceTime(SourceKind Kind, string Key, string DisplayName, Category Category, TimeSpan ScreenTime);
+
+/// <summary>A Day's total Screen Time and how it splits across the Categories, which add up to the total.</summary>
+public sealed class DayTotals
+{
+    private readonly IReadOnlyDictionary<Category, TimeSpan> _byCategory;
+
+    internal DayTotals(IEnumerable<SourceTime> sources)
+    {
+        var list = sources.ToList();
+        ScreenTime = Sum(list);
+        _byCategory = Enum.GetValues<Category>().ToDictionary(
+            category => category,
+            category => Sum(list.Where(s => s.Category == category)));
+    }
+
+    /// <summary>The Day's total Screen Time across all Sources.</summary>
+    public TimeSpan ScreenTime { get; }
+
+    /// <summary>The Day's Screen Time on Sources in the Category; zero when there are none.</summary>
+    public TimeSpan For(Category category) => _byCategory[category];
+
+    private static TimeSpan Sum(IEnumerable<SourceTime> sources) =>
+        sources.Aggregate(TimeSpan.Zero, (sum, s) => sum + s.ScreenTime);
+}
 
 /// <summary>
 /// The Core facade. The host calls <see cref="Tick"/> about once a second; the tracker samples the
@@ -119,6 +152,17 @@ public sealed class ScreenTimeTracker : IDisposable
         var start = day.ToDateTime(TimeOnly.MinValue);
         return _store.SourcesBetween(start, start.AddDays(1));
     }
+
+    /// <summary>The Day's total Screen Time and the total for each Category, including time not yet flushed.</summary>
+    public DayTotals TotalsOn(DateOnly day) => new(SourcesOn(day));
+
+    /// <summary>
+    /// Files the Source under the Category. Category lives on the Source, so this re-files all of its
+    /// time, past and future. Does nothing for a Source never seen.
+    /// </summary>
+    /// <param name="key">The Source's <see cref="SourceTime.Key"/>.</param>
+    public void SetCategory(SourceKind kind, string key, Category category) =>
+        _store.SetCategory(kind, key, category);
 
     public void Dispose()
     {

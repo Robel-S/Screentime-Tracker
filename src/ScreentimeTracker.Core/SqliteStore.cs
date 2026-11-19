@@ -40,6 +40,12 @@ internal sealed class SqliteStore : IDisposable
                 value TEXT NOT NULL
             );
             """);
+
+        // Databases created before Categories existed lack the column; their Sources start Uncategorized.
+        if (!HasColumn("sources", "category"))
+        {
+            Execute($"ALTER TABLE sources ADD COLUMN category TEXT NOT NULL DEFAULT '{Category.Uncategorized}';");
+        }
     }
 
     public string? ReadSetting(string name)
@@ -77,6 +83,16 @@ internal sealed class SqliteStore : IDisposable
         return (long)command.ExecuteScalar()!;
     }
 
+    public void SetCategory(SourceKind kind, string key, Category category)
+    {
+        using var command = _connection.CreateCommand();
+        command.CommandText = "UPDATE sources SET category = $category WHERE kind = $kind AND key = $key;";
+        command.Parameters.AddWithValue("$category", category.ToString());
+        command.Parameters.AddWithValue("$kind", kind.ToString());
+        command.Parameters.AddWithValue("$key", key);
+        command.ExecuteNonQuery();
+    }
+
     public long StartRecord(long sourceId, DateTime start)
     {
         using var command = _connection.CreateCommand();
@@ -103,7 +119,7 @@ internal sealed class SqliteStore : IDisposable
     {
         using var command = _connection.CreateCommand();
         command.CommandText = """
-            SELECT s.kind, s.key, s.display_name,
+            SELECT s.kind, s.key, s.display_name, s.category,
                    SUM(MIN(r.end_time, $to) - MAX(r.start_time, $from)) AS total
             FROM time_records r
             JOIN sources s ON s.id = r.source_id
@@ -123,12 +139,22 @@ internal sealed class SqliteStore : IDisposable
                 Enum.Parse<SourceKind>(reader.GetString(0)),
                 reader.GetString(1),
                 reader.GetString(2),
-                TimeSpan.FromTicks(reader.GetInt64(3))));
+                Enum.Parse<Category>(reader.GetString(3)),
+                TimeSpan.FromTicks(reader.GetInt64(4))));
         }
         return result;
     }
 
     public void Dispose() => _connection.Dispose();
+
+    private bool HasColumn(string table, string column)
+    {
+        using var command = _connection.CreateCommand();
+        command.CommandText = "SELECT COUNT(*) FROM pragma_table_info($table) WHERE name = $column;";
+        command.Parameters.AddWithValue("$table", table);
+        command.Parameters.AddWithValue("$column", column);
+        return (long)command.ExecuteScalar()! > 0;
+    }
 
     private void Execute(string sql)
     {

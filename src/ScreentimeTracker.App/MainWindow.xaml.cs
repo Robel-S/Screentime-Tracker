@@ -7,12 +7,17 @@ using ScreentimeTracker.Core;
 
 namespace ScreentimeTracker.App;
 
-/// <summary>Lists today's Sources (Apps and Websites) by Screen Time, most first. Refreshes while it is visible.</summary>
+/// <summary>
+/// Shows today's total Screen Time and its split by Category, and lists today's Sources (Apps and
+/// Websites) by Screen Time, most first, each with its Category, which can be changed inline.
+/// Refreshes while it is visible.
+/// </summary>
 public partial class MainWindow : Window
 {
     private readonly ScreenTimeTracker _tracker;
     private readonly DispatcherTimer _refresher;
     private bool _quitting;
+    private bool _choosingCategory;
 
     public MainWindow(ScreenTimeTracker tracker)
     {
@@ -72,11 +77,51 @@ public partial class MainWindow : Window
         base.OnClosing(e);
     }
 
+    // Refreshing replaces the rows, which would close a Category drop-down the user has open.
+    private void CategoryDropDown_Opened(object? sender, EventArgs e) => _choosingCategory = true;
+
+    private void CategoryDropDown_Closed(object? sender, EventArgs e) => _choosingCategory = false;
+
     private void Refresh()
     {
-        SourceList.ItemsSource = _tracker.SourcesOn(DateOnly.FromDateTime(DateTime.Now))
-            .Select(s => new { Name = s.DisplayName, Time = Format(s.ScreenTime) })
-            .ToList();
+        if (_choosingCategory) return;
+
+        var today = DateOnly.FromDateTime(DateTime.Now);
+        var sources = _tracker.SourcesOn(today);
+        SourceList.ItemsSource = sources.Select(s => new SourceRow(s, Recategorize)).ToList();
+
+        var totals = _tracker.TotalsOn(today);
+        TotalText.Text = Format(totals.ScreenTime);
+        ProductiveText.Text = Format(totals.For(Category.Productive));
+        EntertainmentText.Text = Format(totals.For(Category.Entertainment));
+        UncategorizedText.Text = Format(totals.For(Category.Uncategorized));
+    }
+
+    private void Recategorize(SourceTime source, Category category)
+    {
+        _tracker.SetCategory(source.Kind, source.Key, category);
+        // Let the ComboBox finish its own selection change before its row is replaced.
+        Dispatcher.BeginInvoke(Refresh, DispatcherPriority.Background);
+    }
+
+    /// <summary>A row in the Source list. Choosing a Category in the row re-files the Source.</summary>
+    private sealed class SourceRow(SourceTime source, Action<SourceTime, Category> recategorize)
+    {
+        private Category _category = source.Category;
+
+        public string Name => source.DisplayName;
+        public string Time => Format(source.ScreenTime);
+
+        public Category Category
+        {
+            get => _category;
+            set
+            {
+                if (value == _category) return;
+                _category = value;
+                recategorize(source, value);
+            }
+        }
     }
 
     private static string Format(TimeSpan time) => time.TotalHours >= 1
