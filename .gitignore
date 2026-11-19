@@ -482,3 +482,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# The WPF host project folder ends in ".App"; keep it out of the *.app (macOS bundle) rule above.
+!/src/ScreentimeTracker.App/
