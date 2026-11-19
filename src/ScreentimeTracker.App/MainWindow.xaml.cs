@@ -8,9 +8,10 @@ using ScreentimeTracker.Core;
 namespace ScreentimeTracker.App;
 
 /// <summary>
-/// Shows today's total Screen Time and its split by Category, and lists today's Sources (Apps and
-/// Websites) by Screen Time, most first, each with its Category, which can be changed inline.
-/// Refreshes while it is visible.
+/// Shows Screen Time for either Today or the Last 7 Days: the period's total and its split by Category,
+/// each Day's totals when looking at the Last 7 Days, and the period's Sources (Apps and Websites) by
+/// Screen Time, most first, each with its Category, which can be changed inline. Refreshes while it is
+/// visible.
 /// </summary>
 public partial class MainWindow : Window
 {
@@ -82,19 +83,43 @@ public partial class MainWindow : Window
 
     private void CategoryDropDown_Closed(object? sender, EventArgs e) => _choosingCategory = false;
 
+    private void Period_Checked(object sender, RoutedEventArgs e)
+    {
+        // Checked fires for the default option while the window is still being built.
+        if (_tracker is not null) Refresh();
+    }
+
     private void Refresh()
     {
         if (_choosingCategory) return;
 
         var today = DateOnly.FromDateTime(DateTime.Now);
-        var sources = _tracker.SourcesOn(today);
-        SourceList.ItemsSource = sources.Select(s => new SourceRow(s, Recategorize)).ToList();
+        var showingWeek = Last7DaysOption.IsChecked == true;
+        var report = showingWeek ? _tracker.Last7Days(today) : _tracker.ReportFor(today, today);
 
-        var totals = _tracker.TotalsOn(today);
-        TotalText.Text = Format(totals.ScreenTime);
-        ProductiveText.Text = Format(totals.For(Category.Productive));
-        EntertainmentText.Text = Format(totals.For(Category.Entertainment));
-        UncategorizedText.Text = Format(totals.For(Category.Uncategorized));
+        PeriodText.Text = showingWeek ? "Last 7 Days" : "Today";
+        SourceList.ItemsSource = report.Sources.Select(s => new SourceRow(s, Recategorize)).ToList();
+
+        TotalText.Text = Format(report.ScreenTime);
+        ProductiveText.Text = Format(report.For(Category.Productive));
+        EntertainmentText.Text = Format(report.For(Category.Entertainment));
+        UncategorizedText.Text = Format(report.For(Category.Uncategorized));
+
+        DayList.Visibility = showingWeek ? Visibility.Visible : Visibility.Collapsed;
+        // Most recent first, so Today sits at the top.
+        DayList.ItemsSource = showingWeek ? report.Days.Reverse().Select(d => new DayRow(d, today)).ToList() : null;
+    }
+
+    /// <summary>A row in the Last 7 Days breakdown: one Day's total and Category totals.</summary>
+    private sealed class DayRow(DayTotals totals, DateOnly today)
+    {
+        public string Day => totals.Day == today ? "Today"
+            : totals.Day == today.AddDays(-1) ? "Yesterday"
+            : totals.Day.ToString("ddd d MMM", CultureInfo.CurrentCulture);
+        public string Total => Format(totals.ScreenTime);
+        public string Productive => Format(totals.For(Category.Productive));
+        public string Entertainment => Format(totals.For(Category.Entertainment));
+        public string Uncategorized => Format(totals.For(Category.Uncategorized));
     }
 
     private void Recategorize(SourceTime source, Category category)

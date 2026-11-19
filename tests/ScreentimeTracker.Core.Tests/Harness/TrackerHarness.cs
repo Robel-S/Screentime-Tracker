@@ -13,11 +13,11 @@ public sealed class TrackerHarness : IDisposable
 
     private readonly string _directory;
 
-    public TrackerHarness() : this(seedDatabase: null) { }
-
     /// <param name="seedDatabase">Writes a database file at the given path before the tracker opens it, as an older version would have left it.</param>
-    public TrackerHarness(Action<string>? seedDatabase)
+    /// <param name="start">The local time the clock starts at; <see cref="Morning"/> unless given.</param>
+    public TrackerHarness(Action<string>? seedDatabase = null, DateTime? start = null)
     {
+        Clock = new FakeClock(start ?? Morning);
         _directory = Path.Combine(Path.GetTempPath(), "screentime-tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(_directory);
         _databasePath = Path.Combine(_directory, "screentime.db");
@@ -28,7 +28,7 @@ public sealed class TrackerHarness : IDisposable
     }
 
     private readonly string _databasePath;
-    private FakeClock Clock { get; } = new(Morning);
+    private FakeClock Clock { get; }
 
     public FakeSystemSignals Signals { get; }
     public FakeTabFeed Tabs { get; }
@@ -107,6 +107,14 @@ public sealed class TrackerHarness : IDisposable
 
     public DayTotals TodaysTotals() => Tracker.TotalsOn(Today);
 
+    public DateOnly Yesterday => Today.AddDays(-1);
+
+    /// <summary>Screen Time for the App on the Day, found by the name the user sees in the list.</summary>
+    public TimeSpan TimeOn(DateOnly day, AppIdentity app) => TimeOn(day, app.DisplayName);
+
+    private TimeSpan TimeOn(DateOnly day, string displayName) =>
+        Tracker.SourcesOn(day).SingleOrDefault(s => s.DisplayName == displayName)?.ScreenTime ?? TimeSpan.Zero;
+
     /// <summary>Sets the Category of the App as the user would, by picking it on the App's row in today's list.</summary>
     public void Categorize(AppIdentity app, Category category) => Categorize(app.DisplayName, category);
 
@@ -121,8 +129,7 @@ public sealed class TrackerHarness : IDisposable
     public TimeSpan TimeFor(AppIdentity app) => TimeFor(app.DisplayName);
 
     /// <summary>Today's Screen Time for the Source the user sees under this name, such as a Website's hostname.</summary>
-    public TimeSpan TimeFor(string displayName) =>
-        TodaysSources().SingleOrDefault(s => s.DisplayName == displayName)?.ScreenTime ?? TimeSpan.Zero;
+    public TimeSpan TimeFor(string displayName) => TimeOn(Today, displayName);
 
     public void Dispose()
     {

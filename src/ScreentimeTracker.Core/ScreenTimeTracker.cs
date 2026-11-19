@@ -27,14 +27,18 @@ public sealed class DayTotals
 {
     private readonly IReadOnlyDictionary<Category, TimeSpan> _byCategory;
 
-    internal DayTotals(IEnumerable<SourceTime> sources)
+    internal DayTotals(DateOnly day, IEnumerable<SourceTime> sources)
     {
+        Day = day;
         var list = sources.ToList();
         ScreenTime = Sum(list);
         _byCategory = Enum.GetValues<Category>().ToDictionary(
             category => category,
             category => Sum(list.Where(s => s.Category == category)));
     }
+
+    /// <summary>The Day these totals are for.</summary>
+    public DateOnly Day { get; }
 
     /// <summary>The Day's total Screen Time across all Sources.</summary>
     public TimeSpan ScreenTime { get; }
@@ -44,6 +48,20 @@ public sealed class DayTotals
 
     private static TimeSpan Sum(IEnumerable<SourceTime> sources) =>
         sources.Aggregate(TimeSpan.Zero, (sum, s) => sum + s.ScreenTime);
+}
+
+/// <summary>Screen Time over a run of Days.</summary>
+/// <param name="Days">Each Day's totals, oldest first, with a zero entry for every Day without Screen Time.</param>
+/// <param name="Sources">Screen Time per Source over all the Days together, most first.</param>
+public sealed record PeriodReport(IReadOnlyList<DayTotals> Days, IReadOnlyList<SourceTime> Sources)
+{
+    /// <summary>The total Screen Time over all the Days.</summary>
+    public TimeSpan ScreenTime => Sum(d => d.ScreenTime);
+
+    /// <summary>The Screen Time over all the Days on Sources in the Category.</summary>
+    public TimeSpan For(Category category) => Sum(d => d.For(category));
+
+    private TimeSpan Sum(Func<DayTotals, TimeSpan> of) => Days.Aggregate(TimeSpan.Zero, (sum, d) => sum + of(d));
 }
 
 /// <summary>
@@ -145,16 +163,37 @@ public sealed class ScreenTimeTracker : IDisposable
         }
     }
 
-    /// <summary>Screen Time per Source on the given Day, most first, including time not yet flushed.</summary>
+    /// <summary>
+    /// Screen Time per Source on the given Day, most first, including time not yet flushed. A Day runs
+    /// from local midnight to midnight; time spanning midnight counts only its part within the Day.
+    /// </summary>
     public IReadOnlyList<SourceTime> SourcesOn(DateOnly day)
     {
         Flush();
-        var start = day.ToDateTime(TimeOnly.MinValue);
-        return _store.SourcesBetween(start, start.AddDays(1));
+        return StoredSources(day, day);
     }
 
     /// <summary>The Day's total Screen Time and the total for each Category, including time not yet flushed.</summary>
-    public DayTotals TotalsOn(DateOnly day) => new(SourcesOn(day));
+    public DayTotals TotalsOn(DateOnly day) => new(day, SourcesOn(day));
+
+    /// <summary>The 7 Days ending with <paramref name="today"/>, including time not yet flushed.</summary>
+    public PeriodReport Last7Days(DateOnly today) => ReportFor(today.AddDays(-6), today);
+
+    /// <summary>
+    /// Each Day from <paramref name="firstDay"/> to <paramref name="lastDay"/> inclusive, and the Sources
+    /// over them together, including time not yet flushed.
+    /// </summary>
+    public PeriodReport ReportFor(DateOnly firstDay, DateOnly lastDay)
+    {
+        // One flush, so the Days and the Sources describe the same moment.
+        Flush();
+        var days = new List<DayTotals>();
+        for (var day = firstDay; day <= lastDay; day = day.AddDays(1))
+        {
+            days.Add(new DayTotals(day, StoredSources(day, day)));
+        }
+        return new PeriodReport(days, StoredSources(firstDay, lastDay));
+    }
 
     /// <summary>
     /// Files the Source under the Category. Category lives on the Source, so this re-files all of its
@@ -169,6 +208,10 @@ public sealed class ScreenTimeTracker : IDisposable
         Flush();
         _store.Dispose();
     }
+
+    /// <summary>Stored Screen Time per Source from the start of the first Day to the end of the last, most first.</summary>
+    private IReadOnlyList<SourceTime> StoredSources(DateOnly firstDay, DateOnly lastDay) =>
+        _store.SourcesBetween(firstDay.ToDateTime(TimeOnly.MinValue), lastDay.AddDays(1).ToDateTime(TimeOnly.MinValue));
 
     private static bool IsValidIdleThreshold(TimeSpan threshold) =>
         threshold >= MinIdleThreshold && threshold <= MaxIdleThreshold;
